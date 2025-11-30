@@ -15,30 +15,34 @@ Store cleaned data in PostgreSQL database
 
 Derive actionable insights through visualizations and recommendations
 
-##📂 Project Structure
-text
-Customer-Experience-Analysis-for-Fintech-Apps/
-├── data/
-│   ├── raw/                   # Raw scraped data
-│   └── processed/             # Processed data with sentiment analysis
-├── notebooks/
-│   └── analysis_notebook.ipynb # Main analysis notebook
-├── scripts/
-│   ├── sentiment_analysis.py  # Sentiment analysis class
-│   └── data_loader.py         # Data loading utilities
-├── requirements.txt           # Python dependencies
-├── .gitignore                 # Git ignore rules
-└── README.md                  # Project documentation
-🚀 Installation & Setup
-Prerequisites
-Python 3.8+
+##📂 Project Structure Implementation
+Fintech-Apps-Customer-Experience/
+├── .vscode/              # IDE configuration
+│   └── settings.json
+├── .github/              # CI/CD workflows
+│   └── workflows/
+│       └── ci.yml
+├── data/                 # Data management
+│   ├── raw/             # Raw datasets
+│   └── processed/       # Processed data
+├── notebooks/           # Exploratory analysis
+├── src/                 # Source code
+├── tests/               # Test suites
+├── scripts/             # Utility scripts
+├── .gitignore          # Version control exclusions
+├── requirements.txt    # Dependencies
+└── README.md          # Project document
 
-Git
+## 🚀 Installation & Setup
+**Prerequisites**
+* ##### Python 3.8+
 
-PostgreSQL (for Task 3)
+* ##### Git
 
-Installation Steps
-Clone the repository
+* ##### PostgreSQL (for Task 3)
+
+### Installation Steps
+**Clone the repository**
 
 bash
 git clone https://github.com/DiboraEyasu/Fintech-Apps-Customer-Experience.git
