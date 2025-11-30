@@ -7,11 +7,17 @@ This script cleans and preprocesses the scraped reviews data.
 - Normalizes dates
 - Cleans text data
 """
+
 # Import the sys module to handle system-specific parameters and functions
 import sys
 # Import the os module to handle file paths and operating system functionalities
 import os
+
 # Add the parent directory of the current script to the Python path
+# This allows us to import modules from the parent directory (like config.py if it were there, or siblings)
+# os.path.abspath(__file__) gets the full path of this script
+# os.path.dirname(...) gets the directory containing this script
+# The outer os.path.dirname(...) gets the parent directory of that directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import pandas for data manipulation and analysis (DataFrames)
@@ -19,11 +25,12 @@ import pandas as pd
 # Import numpy for numerical operations (though mostly used implicitly by pandas here)
 import numpy as np
 # Import datetime class from datetime module to handle date and time objects
-from datetime import datetime as dt
+from datetime import datetime
 # Import re module for regular expression operations (used for text cleaning)
-import re 
+import re
 # Import DATA_PATHS dictionary from the local config module
 from config import DATA_PATHS
+
 
 class ReviewPreprocessor:
     """Preprocessor class for review data"""
@@ -39,74 +46,89 @@ class ReviewPreprocessor:
         # Set the input path: use the provided argument, or default to DATA_PATHS['raw_reviews'] from config
         self.input_path = input_path or DATA_PATHS['raw_reviews']
         # Set the output path: use the provided argument, or default to DATA_PATHS['processed_reviews'] from config
-        self.output_path = output_path or DATA_PATHS['processsed_reviews']
-        # Define a list of columns that are absolutely required for our analysis
-        self.critical_cols = ['rating', 'review_text', 'bank_name']
-        # Initialize an empt = y DataFrame attribute to hold our data
+        self.output_path = output_path or DATA_PATHS['processed_reviews']
+        # Initialize an empty DataFrame attribute to hold our data
         self.df = None
         # Initialize a dictionary to keep track of processing statistics (counts, errors, etc.)
         self.stats = {}
 
-
     def load_data(self):
         """Load raw reviews data"""
         # Print a message indicating that data loading has started
-        print("... loading raw data ...")
-        # Always return True to indicate success and False to indicate failure
-
+        print("Loading raw data...")
         try:
+            # Read the CSV file at self.input_path into a pandas DataFrame
             self.df = pd.read_csv(self.input_path)
+            # Print the number of records loaded
             print(f"Loaded {len(self.df)} reviews")
             # Record the initial number of records in our stats dictionary
-
+            self.stats['original_count'] = len(self.df)
+            # Return True to indicate success
+            return True
         except FileNotFoundError:
             # Handle the specific error where the file does not exist
-            print(f"❌ERROR: File not found in {self.input_path} ")
+            print(f"ERROR: File not found: {self.input_path}")
+            # Return False to indicate failure
+            return False
         except Exception as e:
-            print(f"ERROR: ❌ Failed to load data: {str(e)}")
-            
+            # Handle any other general errors that occur during loading
+            print(f"ERROR: Failed to load data: {str(e)}")
+            # Return False to indicate failure
+            return False
+
     def check_missing_data(self):
         """Check for missing data"""
         # Print a header for this step [1/6]
         print("\n[1/6] Checking for missing data...")
+
+        # Calculate the count of missing (null) values for each column
         missing = self.df.isnull().sum()
         # Calculate the percentage of missing values for each column
-        missing_percent = (missing/len(self.df)) * 100
+        missing_pct = (missing / len(self.df)) * 100
 
         # Print the section header
         print("\nMissing values:")
         # Loop through each column name in the index of the 'missing' series
         for col in missing.index:
+            # If the column has at least one missing value
             if missing[col] > 0:
-                print(f"{col}: {missing[col]} ({missing_percent[col]:.2f}%)")
-
+                # Print the column name, count of missing values, and percentage
+                print(f"  {col}: {missing[col]} ({missing_pct[col]:.2f}%)")
 
         # Store the dictionary of missing counts in our stats for reporting later
         self.stats['missing_before'] = missing.to_dict()
-        missing_critical = self.df[self.critical_cols].isna().sum()
 
+        # Define a list of columns that are absolutely required for our analysis
+        critical_cols = ['review_text', 'rating', 'bank_name']
+        # Calculate missing values just for these critical columns
+        missing_critical = self.df[critical_cols].isnull().sum()
+
+        # If there are any missing values in critical columns
         if missing_critical.sum() > 0:
             # Print a warning message
-            print("\n⚠⚠ WARNING: Missing values in critical columns:")
+            print("\nWARNING: Missing values in critical columns:")
             # Print the counts of missing values for the critical columns that have them
             print(missing_critical[missing_critical > 0])
-
 
     def handle_missing_values(self):
         """Handle missing values"""
         # Print a header for this step [2/6]
         print("\n[2/6] Handling missing values...")
 
-
+        # Define the critical columns again
+        critical_cols = ['review_text', 'rating', 'bank_name']
         # Store the count before dropping rows
-        before_drop = len(self.df)
-        self.df = self.df.dropna(subset=self.critical_cols)
-        removed = before_drop - len(self.df)
+        before_count = len(self.df)
+        # Drop any rows that have missing values (NaN) in the critical columns
+        self.df = self.df.dropna(subset=critical_cols)
+        # Calculate how many rows were removed
+        removed = before_count - len(self.df)
 
+        # If any rows were removed, print a message
         if removed > 0:
-            print(f"Removed {removed} rows with missing values in their critical columns.")
+            print(f"Removed {removed} rows with missing critical values")
 
-                # For the 'user_name' column, fill missing values with the string 'Anonymous'
+        # For the 'user_name' column, fill missing values with the string 'Anonymous'
         self.df['user_name'] = self.df['user_name'].fillna('Anonymous')
         # For the 'thumbs_up' column, fill missing values with 0
         self.df['thumbs_up'] = self.df['thumbs_up'].fillna(0)
@@ -118,8 +140,7 @@ class ReviewPreprocessor:
         # Record the new total count in stats
         self.stats['count_after_missing'] = len(self.df)
 
-    
-    def noramlize_dates(self):
+    def normalize_dates(self):
         """Normalize date formats to YYYY-MM-DD"""
         # Print a header for this step [3/6]
         print("\n[3/6] Normalizing dates...")
@@ -130,17 +151,19 @@ class ReviewPreprocessor:
             self.df['review_date'] = pd.to_datetime(self.df['review_date'])
 
             # Convert the datetime objects to just date objects (YYYY-MM-DD), removing time info
-            self.df['review_date'] = self.df['review_date'].dt.date()
+            self.df['review_date'] = self.df['review_date'].dt.date
 
             # Extract the year from the date and create a new 'review_year' column
             self.df['review_year'] = pd.to_datetime(self.df['review_date']).dt.year
             # Extract the month from the date and create a new 'review_month' column
             self.df['review_month'] = pd.to_datetime(self.df['review_date']).dt.month
+
             # Print the range of dates found in the data (minimum and maximum)
-            print(f"Date Range: {self.df['review_date'].min()} to {self.df['review_date']}")
+            print(f"Date range: {self.df['review_date'].min()} to {self.df['review_date'].max()}")
+
         except Exception as e:
             # Handle errors if date conversion fails
-            print(f"❌WARNING: Error normalizing dates: {str(e)}")
+            print(f"WARNING: Error normalizing dates: {str(e)}")
 
     def clean_text(self):
         """Clean review text"""
@@ -150,10 +173,6 @@ class ReviewPreprocessor:
         def clean_review_text(text):
             """Inner function to clean individual review text strings"""
             # If the text is NaN (missing) or empty string, return empty string
-            
-#                               #
-#                                   #
-#                                         #
             if pd.isna(text) or text == '':
                 return ''
 
@@ -192,23 +211,23 @@ class ReviewPreprocessor:
 
     def validate_ratings(self):
         """Validate rating values (should be 1-5)"""
-        # Print a header for this step [5/6]
         print("\n[5/6] Validating ratings...")
-
-        # Find rows where 'rating' is less than 1 OR greater than 5
+        
+        # ✅ ADD THIS: Convert empty strings to NaN first, then handle
+        self.df['rating'] = pd.to_numeric(self.df['rating'], errors='coerce')
+        
+        # ✅ ADD THIS: Fill NaN ratings with 0 or median if you prefer
+        self.df['rating'] = self.df['rating'].fillna(0)
+        
+        # Rest of your existing code...
         invalid = self.df[(self.df['rating'] < 1) | (self.df['rating'] > 5)]
-
-        # If there are any invalid ratings
+        
         if len(invalid) > 0:
-            # Print a warning with the count of invalid ratings
             print(f"WARNING: Found {len(invalid)} reviews with invalid ratings")
-            # Filter the DataFrame to keep only rows where rating is between 1 and 5 (inclusive)
             self.df = self.df[(self.df['rating'] >= 1) & (self.df['rating'] <= 5)]
         else:
-            # If all ratings are valid, print a confirmation
             print("All ratings are valid (1-5)")
-
-        # Record the number of invalid ratings removed
+        
         self.stats['invalid_ratings_removed'] = len(invalid)
 
     def prepare_final_output(self):
