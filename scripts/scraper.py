@@ -68,6 +68,8 @@ class PlayStoreScraper:
                     count=count,            # Number of reviews to fetch
                     filter_score_with=None  # Fetch all ratings (1-5 stars)
                 )
+                print(f"✅ Successfully fetched {len(result)} reviews for {app_id}")
+                return result
             except Exception as e:
                 print(f"Attempt {attempt + 1} failed: {str(e)}")
                 # Wait before retrying if it's not the last attempt
@@ -78,7 +80,7 @@ class PlayStoreScraper:
                     print(f"Failed to scrape reviews after {self.max_retries} attempts")
                     return []
                 
-            return []
+        return []
         
     
     def process_reviews(self, reviews_data, bank_code):
@@ -89,13 +91,14 @@ class PlayStoreScraper:
         processed = []
 
         for review in reviews_data:
+            # ✅ FIX: Use correct field names from google-play-scraper
             processed.append({
-                'review_id': review.get('reviewed', ''),
+                'review_id': review.get('reviewId', ''),  # ✅ FIX: 'reviewId' not 'reviewed'
                 'review_text': review.get('content', ''),
-                'rating': review.get('rating', ''),
+                'rating': review.get('score', 0),  # ✅ FIX: 'score' not 'rating'
                 'review_date': review.get('at', datetime.now()),
                 'user_name': review.get('userName', 'Anonymous'),
-                'thumbs_up': review.get('thumbsUpContent', 0),
+                'thumbs_up': review.get('thumbsUpCount', 0),  # ✅ FIX: 'thumbsUpCount' not 'thumbsUpContent'
                 'reply_content': review.get('replyContent', None),
                 'bank_code': bank_code,
                 'bank_name': self.bank_names[bank_code],
@@ -104,7 +107,7 @@ class PlayStoreScraper:
             })
 
         return processed
-    
+        
 
     def scrape_all_banks(self):
          """
@@ -166,7 +169,7 @@ class PlayStoreScraper:
 
 
              # save raw data to csv
-             os.makedirs(DATA_PATHS['raw'], exists_ok=True)
+             os.makedirs(DATA_PATHS['raw'], exist_ok=True)
              df.to_csv(DATA_PATHS['raw_reviews'], index=False)
              
              print("\n" + "=" * 60)
@@ -176,13 +179,22 @@ class PlayStoreScraper:
              
              # Print stats per bank
              print(f"Reviews per bank:")
-             for bank_code  in self.bank_names.keys():
-                 count = len(df[df['bank_code'] == bank_code])
-                 print(f" {self.bank_names[bank_code]} has {count} reviews.")
+             if 'bank_code' in df.columns:
+                # Print stats per bank
+                print(f"Reviews per bank:")
+                for bank_code in self.bank_names.keys():
+                    count = len(df[df['bank_code'] == bank_code])
+                    print(f" {self.bank_names[bank_code]} has {count} reviews.")
+             else:
+                # ✅ ALTERNATIVE: Use 'bank_name' column instead
+                print(f"Reviews per bank:")
+                bank_counts = df['bank_name'].value_counts()
+                for bank_name, count in bank_counts.items():
+                    print(f" {bank_name}: {count} reviews")
+                
+             print(f"\n📁Reviews data saved to {DATA_PATHS['raw_reviews']}")
 
-                 print(f"\n📁Reviews data saved to {DATA_PATHS['raw_reviews']}")
-
-                 return df
+             return df
          else:
              print("\n❌ERROR: No reviews were collected!")
              return pd.DataFrame()
@@ -204,9 +216,18 @@ class PlayStoreScraper:
                 samples = bank_df.head()
 
                 for idx, row in samples.iterrows():
-                    print(f"\n Rating: {'⭐' * row['rating']}")
-                    print(f"Review: {row['review_text'][:200]}...")
-                    print(f"Date: {row['review_date']}")
+                    rating = row['rating']
+                try:
+                    # Convert to int and display stars
+                    rating_int = int(rating)
+                    stars = '⭐' * rating_int
+                    print(f"\n Rating: {stars} ({rating_int}/5)")
+                except (ValueError, TypeError):
+                    # If rating is empty or invalid, show the raw value
+                    print(f"\n Rating: {rating} (could not convert to int)")
+                
+                print(f"Review: {row['review_text'][:200]}...")
+                print(f"Date: {row['review_date']}")
          
 def main():
     """Main execution function"""
