@@ -140,6 +140,26 @@ class ReviewPreprocessor:
         # Record the new total count in stats
         self.stats['count_after_missing'] = len(self.df)
 
+    def remove_duplicates(self):
+        """Handle duplicate values"""
+        print("\n[2/6] Handling duplicate values...")
+        # Define the critical columns again
+        critical_cols = ['review_text', 'rating', 'bank_name']
+        # Store the count before dropping rows
+        before_count = len(self.df)
+        # Drop any rows that have missing values (NaN) in the critical columns
+        self.df = self.df.drop_duplicates(subset=critical_cols)
+        # Calculate how many rows were removed
+        removed = before_count - len(self.df)
+
+        # If any rows were removed, print a message
+        if removed > 0:
+            print(f"Removed {removed} rows with duplicate critical values")
+        self.stats['rows_removed_duplicate'] = removed
+        # Record the new total count in stats
+        self.stats['count_after_duplicate'] = len(self.df)
+
+
     def normalize_dates(self):
         """Normalize date formats to YYYY-MM-DD"""
         # Print a header for this step [3/6]
@@ -372,6 +392,7 @@ class ReviewPreprocessor:
         self.check_missing_data()
         # self.remove_duplicates() - REMOVED AS REQUESTED
         self.handle_missing_values()
+        self.remove_duplicates()
         self.normalize_dates()
         self.clean_text()
         self.validate_ratings()
