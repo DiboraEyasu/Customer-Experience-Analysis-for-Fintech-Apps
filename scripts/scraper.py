@@ -3,11 +3,11 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from google_play_scraper import app, Sort, reviews, reviews_all
-import pandas as pd
+#from google_play_scraper import app, Sort, reviews, reviews_all
+#import pandas as pd
 from datetime import datetime
 import time
-from tqdm import tqdm
+#from tqdm import tqdm
 from config import APP_IDS, BANK_NAMES, SCRAPING_CONFIG, DATA_PATHS
 
 
@@ -228,6 +228,11 @@ class PlayStoreScraper:
                 
                 print(f"Review: {row['review_text'][:200]}...")
                 print(f"Date: {row['review_date']}")
+
+            
+    def doing_nothing(self):
+        """A placeholder method about nothing."""
+        print("Sometimes the hardest thing to do is dooing nothing.")
          
 def main():
     """Main execution function"""
@@ -241,6 +246,7 @@ def main():
     # Display samples if data was collected
     if not df.empty:
         scraper.display_sample_reviews(df)
+        scraper.doing_nothing()
 
     return df
 
