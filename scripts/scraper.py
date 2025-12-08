@@ -3,11 +3,11 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-#from google_play_scraper import app, Sort, reviews, reviews_all
-#import pandas as pd
+from google_play_scraper import app, Sort, reviews, reviews_all
+import pandas as pd
 from datetime import datetime
 import time
-#from tqdm import tqdm
+from tqdm import tqdm
 from config import APP_IDS, BANK_NAMES, SCRAPING_CONFIG, DATA_PATHS
 
 
